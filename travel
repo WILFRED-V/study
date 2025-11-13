@@ -1,0 +1,46 @@
+import gradio as gr
+import ollama
+
+# Read the CSV file
+with open("travel.csv", "r", encoding="utf-8") as f:
+    travel_data = f.read()
+
+SYSTEM_PROMPT = f"""
+You are a helpful AI travel assistant.
+Answer questions based only on the data below.
+If the answer is not in this data, say "I'm sorry, I don't have that information."
+
+{travel_data}
+"""
+
+def trav_agent(user_input):
+    # ⿡ Try answering using dataset
+    response = ollama.chat(
+        model="qwen2.5:0.5b",
+        messages=[
+            {'role': 'system', 'content': SYSTEM_PROMPT},
+            {'role': 'user', 'content': user_input}
+        ]
+    )
+    answer = response['message']['content'].strip()
+
+    # ⿢ Fallback: general AI response if not found in data
+    if "I'm sorry, I don't have that information." in answer:
+        response = ollama.chat(
+            model="qwen2.5:0.5b",
+            messages=[{'role': 'user', 'content': user_input}]
+        )
+        answer = response['message']['content'].strip()
+
+    return answer
+
+# Simple Gradio interface
+demo = gr.Interface(
+    fn=trav_agent,
+    inputs=gr.Textbox(label="Ask your travel question"),
+    outputs=gr.Textbox(label="Answer", lines=8),
+    title="AI Travel Assistant ✈",
+    description="Answers using data from travel.csv. Falls back to Qwen if not found."
+)
+
+demo.launch()
